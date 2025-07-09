@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>GitHub Events</title>
+  </head>
+  <body>
+    <h1>Latest GitHub Events</h1>
+    <div id="events"></div>
+
+    <script>
+        function getDayWithSuffix(day){
+            if (day > 3 && day < 21) return day + "th";
+            switch(day%10){
+                case 1: return day + "st";
+                case 2: return day + "nd";
+                case 3: return day + "rd";
+                default: return day + "th";
+            }
+        }
+
+        function formatTimestamp(isostr){
+            const date = new Date(isostr);
+            const day = getDayWithSuffix(date.getUTCDate());
+            const month = date.toLocaleString('en-GB',{month:'long',timeZone:'UTC'})
+            const year = date.getUTCFullYear();
+            const hour = date.getUTCHours();
+            const minutes = date.getUTCMinutes();
+            const ampm = hour>= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            const paddedMinutes = minutes.toString().padStart(2,'0');
+            return `${day} ${month} ${year} - ${hour12}:${paddedMinutes} ${ampm} UTC`;
+        }
+
+        function formatEvent(event){
+            const author = event.author || "Unknown";
+            const from = event.from || "N/A";
+            const to = event.to || "N/A";
+            const timestamp = formatTimestamp(event.timestamp);
+
+            if (event.action === "PUSH"){
+                return `<p><em>${author} pushed to ${to} on ${timestamp}</em></p>`;
+            }
+            else if (event.action === "PULL_REQUEST"){
+                return `<p><em>${author} submitted a pull request from ${from} to ${to} on ${timestamp}</em></p>`;
+            }
+            else if (event.action === "MERGE"){
+                return `<p><em>${author} merged branch ${from} to ${to} on ${timestamp}</em></p>`;
+            }
+        }
+
+        function fetchEvents(){
+            fetch('/events')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('events');
+                const now = new Date();
+                const recentEvents = data.filter(event => {
+                    const eventTime = new Date(event.timestamp);
+                    const diffSeconds = (now - eventTime) / 1000;
+                    return diffSeconds <= 15;
+                });
+                container.innerHTML = recentEvents.map(formatEvent).join('');
+            });
+        }
+        
+        fetchEvents();
+        setInterval(fetchEvents,15000);
+    </script>
+</html>
